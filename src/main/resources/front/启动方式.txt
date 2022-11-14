@@ -1,0 +1,7 @@
+在 nginx 所在目录下打卡开 cmd 窗口，输入命令：
+start nginx.exe
+
+访问 http://localhost:8080
+
+退出命令：
+nginx -s stop
