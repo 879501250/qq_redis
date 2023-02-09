@@ -1,7 +1,11 @@
 package com.qqdp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.qqdp.dto.LoginFormDTO;
+import com.qqdp.dto.Result;
 import com.qqdp.entity.User;
+
+import javax.servlet.http.HttpSession;
 
 /**
  * <p>
@@ -13,4 +17,9 @@ import com.qqdp.entity.User;
  */
 public interface IUserService extends IService<User> {
 
+    Result sendCode(String phone, HttpSession session);
+
+    Result login(LoginFormDTO loginForm, HttpSession session);
+
+    Result logout(String token);
 }
