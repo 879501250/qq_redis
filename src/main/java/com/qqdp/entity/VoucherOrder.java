@@ -28,6 +28,7 @@ public class VoucherOrder implements Serializable {
 
     /**
      * 主键
+     * 实际业务中最好另外设置一个订单 id 的属性，主键 id 由数据库自增
      */
     @TableId(value = "id", type = IdType.INPUT)
     private Long id;

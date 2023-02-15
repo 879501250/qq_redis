@@ -1,5 +1,6 @@
 package com.qqdp.service;
 
+import com.qqdp.dto.Result;
 import com.qqdp.entity.VoucherOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -13,4 +14,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IVoucherOrderService extends IService<VoucherOrder> {
 
+    Result seckillVoucher(Long voucherId);
+
+    Result createVoucherOrder(Long voucherId, Long userId, String stockKey);
 }
