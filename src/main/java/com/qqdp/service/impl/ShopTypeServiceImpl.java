@@ -31,6 +31,8 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
     @Resource
     StringRedisTemplate stringRedisTemplate;
 
+
+
     // JSON工具
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -52,6 +54,9 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
             }).collect(Collectors.toList());
         } else {
             typeList = query().orderByAsc("sort").list();
+            if (typeList == null) {
+                return Result.fail("店铺分类不存在~");
+            }
             range = typeList.stream().map(shopType -> {
                 try {
                     return mapper.writeValueAsString(shopType);
@@ -60,7 +65,7 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
                 }
                 return null;
             }).collect(Collectors.toList());
-            stringRedisTemplate.opsForList().leftPushAll(key, range);
+            stringRedisTemplate.opsForList().rightPushAll(key, range);
         }
         stringRedisTemplate.expire(key, RedisConstants.CACHE_SHOP_TTL, TimeUnit.MINUTES);
         return Result.ok(typeList);
