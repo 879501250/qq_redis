@@ -40,21 +40,27 @@ public class Blog implements Serializable {
      * 用户id
      */
     private Long userId;
-    /**
-     * 用户图标
-     */
-    @TableField(exist = false)
-    private String icon;
-    /**
-     * 用户姓名
-     */
-    @TableField(exist = false)
-    private String name;
-    /**
-     * 是否点赞过了
-     */
-    @TableField(exist = false)
-    private Boolean isLike;
+
+    // entity 主要用于表示数据库实体，不额外添加数据库不存在的字段属性
+    // 若需要添加额外的属性新建一个对象，如 BlogVO
+//    /**
+//     * 用户图标
+//     */
+//    // 表示数据库无此字段
+//    @TableField(exist = false)
+//    private String icon;
+//    /**
+//     * 用户姓名
+//     */
+//    // 表示数据库无此字段
+//    @TableField(exist = false)
+//    private String name;
+//    /**
+//     * 是否点赞过了
+//     */
+//    // 表示数据库无此字段
+//    @TableField(exist = false)
+//    private Boolean isLike;
 
     /**
      * 标题
