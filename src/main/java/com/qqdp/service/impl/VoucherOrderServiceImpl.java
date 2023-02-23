@@ -111,6 +111,17 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private class VoucherOrderHandler implements Runnable {
         @Override
         public void run() {
+            // 若使用 redis 的消息队列，要先创建队列
+            try {
+                stringRedisTemplate.opsForStream().createGroup("stream.orders", "g1");
+            } catch (Exception e) {
+                if (e.getMessage().contains("Consumer Group name already exists")) {
+                    log.debug("消息队列已存在~");
+                } else {
+                    log.error("创建redis消息队列失败~", e);
+                    return;
+                }
+            }
             while (true) {
                 VoucherOrder order;
 
@@ -137,6 +148,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     // 2.判断订单信息是否为空
                     if (list == null || list.isEmpty()) {
                         // 如果为null，说明没有消息，继续下一次循环
+                        Thread.sleep(200);
                         continue;
                     }
                     // 解析数据
@@ -157,8 +169,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             }
         }
 
+        // 操作异常的重试次数
+        private int retries;
+
         // 处理 pending-list 中的消息
         private void handlePendingList() {
+            retries = 0;
             while (true) {
                 try {
                     // 1.获取pending-list中的订单信息 XREADGROUP GROUP g1 c1 COUNT 1 BLOCK 2000 STREAMS s1 0
@@ -182,11 +198,15 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     createVoucherOrder(voucherOrder);
                     // 4.确认消息 XACK
                     stringRedisTemplate.opsForStream().acknowledge("s1", "g1", record.getId());
+                    retries = 0;
                 } catch (Exception e) {
-                    log.error("处理 pendding 订单异常", e);
-                    try{
+                    if (retries++ > 5) {
+                        log.error("处理 pendding 订单异常", e);
+                        break;
+                    }
+                    try {
                         Thread.sleep(20);
-                    }catch(Exception ex){
+                    } catch (Exception ex) {
                         ex.printStackTrace();
                     }
                 }
