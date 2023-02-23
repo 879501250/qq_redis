@@ -106,7 +106,7 @@
         // 禁用按钮
         this.disabled = true;
         // 按钮倒计时
-        let i = 60;
+        let i = 10;
         this.codeBtnMsg = (i--) + '秒后可重发'
         let taskId = setInterval(() => this.codeBtnMsg = (i--) + '秒后可重发', 1000);
         setTimeout(() => {
