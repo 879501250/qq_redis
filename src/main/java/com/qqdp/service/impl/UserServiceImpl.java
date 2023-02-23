@@ -12,6 +12,7 @@ import com.qqdp.dto.Result;
 import com.qqdp.dto.UserDTO;
 import com.qqdp.entity.User;
 import com.qqdp.mapper.UserMapper;
+import com.qqdp.service.IFollowService;
 import com.qqdp.service.IUserService;
 import com.qqdp.utils.PasswordEncoder;
 import com.qqdp.utils.RedisConstants;
@@ -23,7 +24,9 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -38,6 +41,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Resource
     StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private IFollowService followService;
 
     // JSON工具
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -113,6 +119,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             stringRedisTemplate.opsForValue().set(RedisConstants.LOGIN_USER_KEY + token,
                     value,
                     RedisConstants.LOGIN_USER_TTL, TimeUnit.SECONDS);
+
+            // 登录成功，将用户关注列表保存到 redis 中
+            String followKey = RedisConstants.USER_FOLLOWS + user.getId();
+            stringRedisTemplate.delete(followKey);
+            List<String> user_ids = followService.query().eq("user_id", user.getId()).list()
+                    .stream().map(follow -> follow.getFollowUserId().toString()).collect(Collectors.toList());
+            if (user_ids.size() > 0) {
+                String[] users = user_ids.toArray(new String[user_ids.size()]);
+                stringRedisTemplate.opsForSet().add(followKey, users);
+            }
         } catch (JsonProcessingException e) {
             return Result.fail(e.getMessage());
         }

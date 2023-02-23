@@ -1,8 +1,11 @@
 package com.qqdp.controller;
 
 
+import cn.hutool.core.bean.BeanUtil;
 import com.qqdp.dto.LoginFormDTO;
 import com.qqdp.dto.Result;
+import com.qqdp.dto.UserDTO;
+import com.qqdp.entity.User;
 import com.qqdp.entity.UserInfo;
 import com.qqdp.service.IUserInfoService;
 import com.qqdp.service.IUserService;
@@ -82,5 +85,15 @@ public class UserController {
         info.setUpdateTime(null);
         // 返回
         return Result.ok(info);
+    }
+
+    @GetMapping("/{id}")
+    public Result getUserById(@PathVariable("id") Long userId) {
+        User user = userService.getById(userId);
+        if (user == null) {
+            return Result.fail("用户不存在~");
+        }
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        return Result.ok(userDTO);
     }
 }
