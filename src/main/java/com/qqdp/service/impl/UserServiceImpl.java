@@ -125,10 +125,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             stringRedisTemplate.delete(followKey);
             List<String> user_ids = followService.query().eq("user_id", user.getId()).list()
                     .stream().map(follow -> follow.getFollowUserId().toString()).collect(Collectors.toList());
+            String[] users;
             if (user_ids.size() > 0) {
-                String[] users = user_ids.toArray(new String[user_ids.size()]);
-                stringRedisTemplate.opsForSet().add(followKey, users);
+                users = user_ids.toArray(new String[user_ids.size()]);
+            } else {
+                users = new String[]{"-1"};
             }
+            stringRedisTemplate.opsForSet().add(followKey, users);
         } catch (JsonProcessingException e) {
             return Result.fail(e.getMessage());
         }
