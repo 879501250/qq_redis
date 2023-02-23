@@ -46,6 +46,12 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     // JSON工具
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    /**
+     * 查询商铺信息
+     *
+     * @param id
+     * @return
+     */
     @Override
     public Result queryShopById(Long id) {
         Shop shop = null;
@@ -53,20 +59,20 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         try {
             // 自己写的
             // 互斥锁解决缓存击穿
-            shop = queryWithMutex(id);
+//            shop = queryWithMutex(id);
             // 逻辑过期解决缓存击穿
-            shop = queryWithLogicalExpire(id);
+//            shop = queryWithLogicalExpire(id);
 
             // 封装的工具类
             // 解决缓存穿透
-            shop = cacheClient.queryWithPassThrough(RedisConstants.CACHE_SHOP_KEY, id,
-                    Shop.class, this::getById, RedisConstants.CACHE_SHOP_TTL, TimeUnit.MINUTES);
+//            shop = cacheClient.queryWithPassThrough(RedisConstants.CACHE_SHOP_KEY, id,
+//                    Shop.class, this::getById, RedisConstants.CACHE_SHOP_TTL, TimeUnit.MINUTES);
             // 互斥锁解决缓存击穿
             shop = cacheClient.queryWithMutex(RedisConstants.CACHE_SHOP_KEY, id,
                     Shop.class, s -> getById(s), RedisConstants.CACHE_SHOP_TTL, TimeUnit.MINUTES);
             // 逻辑过期解决缓存击穿
-            shop = cacheClient.queryWithLogicalExpire(RedisConstants.CACHE_SHOP_KEY, id,
-                    Shop.class, s -> getById(s), 20L, TimeUnit.SECONDS);
+//            shop = cacheClient.queryWithLogicalExpire(RedisConstants.CACHE_SHOP_KEY, id,
+//                    Shop.class, s -> getById(s), 20L, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             e.printStackTrace();
