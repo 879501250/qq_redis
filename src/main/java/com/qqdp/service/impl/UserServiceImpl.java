@@ -121,7 +121,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                     RedisConstants.LOGIN_USER_TTL, TimeUnit.SECONDS);
 
             // 登录成功，将用户关注列表保存到 redis 中
-            String followKey = RedisConstants.USER_FOLLOWS + user.getId();
+            String followKey = RedisConstants.USER_FOLLOWS_KEY + user.getId();
             stringRedisTemplate.delete(followKey);
             List<String> user_ids = followService.query().eq("user_id", user.getId()).list()
                     .stream().map(follow -> follow.getFollowUserId().toString()).collect(Collectors.toList());

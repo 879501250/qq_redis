@@ -2,7 +2,6 @@ package com.qqdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.BooleanUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.qqdp.dto.Result;
 import com.qqdp.dto.UserDTO;
@@ -52,7 +51,7 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
         if (user == null) {
             return Result.ok(false);
         }
-        String followKey = RedisConstants.USER_FOLLOWS + user.getId();
+        String followKey = RedisConstants.USER_FOLLOWS_KEY + user.getId();
         // 判断是否关注
         Boolean aBoolean = stringRedisTemplate.opsForSet().isMember(followKey, id.toString());
         return Result.ok(aBoolean);
@@ -72,7 +71,7 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
         if (user == null) {
             return Result.fail("请先登录~");
         }
-        String followKey = RedisConstants.USER_FOLLOWS + user.getId();
+        String followKey = RedisConstants.USER_FOLLOWS_KEY + user.getId();
         // 1.判断到底是关注还是取关
         Boolean aBoolean = stringRedisTemplate.opsForSet().isMember(followKey, id.toString());
         if (!BooleanUtil.isTrue(aBoolean)) {
@@ -96,6 +95,8 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
             }
             // 把关注用户的id从Redis集合中移除
             stringRedisTemplate.opsForSet().remove(followKey, id.toString());
+
+            // TODO：取消关注后要将要将博主的所有推送的博客 id 从 redis 中用户关注博主的博客列表中删除
         }
         return Result.ok("关注成功~");
     }
@@ -114,8 +115,8 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
             return Result.fail("请先登录~");
         }
         Long userId = user.getId();
-        String key = RedisConstants.USER_FOLLOWS + userId;
-        String key2 = RedisConstants.USER_FOLLOWS + id;
+        String key = RedisConstants.USER_FOLLOWS_KEY + userId;
+        String key2 = RedisConstants.USER_FOLLOWS_KEY + id;
 
         // 实际业务一般都有数据预热，无需这步
         Boolean aBoolean = stringRedisTemplate.hasKey(key2);
@@ -141,7 +142,7 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
 
     // 缓存指定用户的关注列表
     private void setFollows(Long id) {
-        String followKey = RedisConstants.USER_FOLLOWS + id;
+        String followKey = RedisConstants.USER_FOLLOWS_KEY + id;
         stringRedisTemplate.delete(followKey);
         List<String> user_ids = query().eq("user_id", id).list().stream()
                 .map(follow -> follow.getFollowUserId().toString()).collect(Collectors.toList());
