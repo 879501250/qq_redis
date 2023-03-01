@@ -62,15 +62,13 @@ public class UserController {
      */
     @PostMapping("/logout")
     public Result logout(@RequestHeader("authorization") String token) {
-        // TODO 实现登出功能
 //        return Result.fail("功能未完成");
         return userService.logout(token);
     }
 
     @GetMapping("/me")
     public Result me() {
-        // TODO 获取当前登录的用户并返回
-        return Result.ok(UserHolder.getUser());
+        return userService.me();
     }
 
     @GetMapping("/info/{id}")

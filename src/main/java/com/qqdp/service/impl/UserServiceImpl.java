@@ -14,10 +14,8 @@ import com.qqdp.entity.User;
 import com.qqdp.mapper.UserMapper;
 import com.qqdp.service.IFollowService;
 import com.qqdp.service.IUserService;
-import com.qqdp.utils.PasswordEncoder;
-import com.qqdp.utils.RedisConstants;
-import com.qqdp.utils.RegexUtils;
-import com.qqdp.utils.SystemConstants;
+import com.qqdp.utils.*;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -136,14 +134,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     // 用户签到
     private void sign(Long id) {
-        String prefixKey = RedisConstants.USER_SIGN_KEY + id;
         // 获取当前日期
         LocalDateTime now = LocalDateTime.now();
-        // 拼接 key
-        String key = prefixKey + now.format(DateTimeFormatter.ofPattern(":yyyy:MM"));
+        // 获取 key
+        String key = getUserSignKey(id, now);
         // 获取今天是本月的第几天
         int dayOfMonth = now.getDayOfMonth();
         stringRedisTemplate.opsForValue().setBit(key, dayOfMonth - 1, true);
+    }
+
+    /**
+     * 获取用户签到 key
+     *
+     * @param id
+     * @param time
+     * @return
+     */
+    private String getUserSignKey(Long id, LocalDateTime time) {
+        String prefixKey = RedisConstants.USER_SIGN_KEY + id;
+        // 拼接 key
+        return prefixKey + time.format(DateTimeFormatter.ofPattern(":yyyy:MM"));
     }
 
     // 数据预热，加载用户关注列表
@@ -168,5 +178,40 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             stringRedisTemplate.delete(key);
         }
         return Result.ok("登出成功~");
+    }
+
+    @Override
+    public Result me() {
+        // 获取用户信息
+        UserDTO user = UserHolder.getUser();
+
+        // 获取用户当月连续签到天数
+        LocalDateTime now = LocalDateTime.now();
+        String key = getUserSignKey(user.getId(), now);
+        int dayOfMonth = now.getDayOfMonth();
+        // 获取本月截止今天为止的所有的签到记录，返回的是一个十进制的数字
+        // 因为底层是字节存储，位数一定是8的倍数，因此要排除补位的数字，只取前几位
+        // BITFIELD sign:5:202203 GET u14 0
+        List<Long> record = stringRedisTemplate.opsForValue().bitField(key,
+                BitFieldSubCommands.create()
+                        .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth)).valueAt(0));
+        if (record == null || record.isEmpty()) {
+            // 没有任何签到结果
+            user.setSignCount(0);
+        } else {
+            Long num = record.get(0);
+            int count = 0;
+            // 判断是否签到
+            // 让这个数字与1做与运算，得到数字的最后一个bit位
+            while ((num & 1) != 0) {
+                // 如果不为0，说明已签到，计数器+1
+                count++;
+                // 把数字右移一位，抛弃最后一个bit位，继续下一个bit位
+                num >>>= 1;
+            }
+            user.setSignCount(count);
+        }
+
+        return Result.ok(user);
     }
 }
