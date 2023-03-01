@@ -46,10 +46,11 @@
         <div class="name">{{blog.name}}</div>
         <span class="time">{{formatTime(new Date(blog.createTime))}}</span>
       </div>
-      <div style="width: 20%">
+      <div style="width: 30%">
         <div class="logout-btn" @click="follow" v-show="!user || user.id !== blog.userId ">
           {{followed ? '取消关注' : '关注'}}
         </div>
+        <span style="text-align: center;">{{blog.view}} 人查看</span>
       </div>
 
     </div>

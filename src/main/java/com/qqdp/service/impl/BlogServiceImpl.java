@@ -3,6 +3,7 @@ package com.qqdp.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.servlet.ServletUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qqdp.VO.BlogVO;
@@ -22,8 +23,12 @@ import com.qqdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -157,7 +162,6 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
     public Result queryHotBlog(Integer current) {
         // 获取登录用户
         UserDTO user = UserHolder.getUser();
-        String userId = user.getId().toString();
 
         // 根据点赞数排名
         Page<Blog> page = query()
@@ -169,9 +173,9 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         List<BlogVO> blogVOList = records.stream().map(record -> {
             BlogVO blog = BeanUtil.copyProperties(record, BlogVO.class);
             setBlogger(blog);
-            if (StrUtil.isNotBlank(userId)) {
+            if (user != null) {
                 // 判断是否点赞
-                blog.setIsLike(isLike(RedisConstants.BLOG_LIKED_KEY + blog.getId(), userId));
+                blog.setIsLike(isLike(RedisConstants.BLOG_LIKED_KEY + blog.getId(), user.getId().toString()));
             }
             return blog;
         }).collect(Collectors.toList());
@@ -188,7 +192,6 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
     public Result queryBlogById(Long id) {
         // 获取登录用户
         UserDTO user = UserHolder.getUser();
-        String userId = user.getId().toString();
 
         Blog blog = getById(id);
         if (blog == null) {
@@ -196,12 +199,39 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         }
 
         BlogVO blogVO = BeanUtil.copyProperties(blog, BlogVO.class);
+        String value;
         setBlogger(blogVO);
-        if (StrUtil.isNotBlank(userId)) {
+        if (user != null) {
             // 判断是否点赞
-            blogVO.setIsLike(isLike(RedisConstants.BLOG_LIKED_KEY + blog.getId(), userId));
+            blogVO.setIsLike(isLike(RedisConstants.BLOG_LIKED_KEY + blog.getId(), user.getId().toString()));
+            value = user.getId().toString();
+        } else {
+            // 若未登录，取请求 ip
+            RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+            HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
+            value = ServletUtil.getClientIP(request);
         }
+
+        // 设置博客浏览量
+        blogVO.setView(getBlogView(blogVO.getId(), value));
+
         return Result.ok(blogVO);
+    }
+
+    /**
+     * 设置并获取博客浏览量
+     *
+     * @param blogId 博客 id
+     * @param value  若已登录者为用户 id，若未登录则为主机 ip
+     * @return
+     */
+    private Long getBlogView(Long blogId, String value) {
+        String viewKey = RedisConstants.BLOG_VIEW_KEY + blogId;
+        // 先增加浏览量
+        stringRedisTemplate.opsForHyperLogLog().add(viewKey, value);
+        // 获取浏览量
+        Long size = stringRedisTemplate.opsForHyperLogLog().size(viewKey);
+        return size == null ? 0 : size;
     }
 
     /**

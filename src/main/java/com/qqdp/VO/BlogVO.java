@@ -17,4 +17,8 @@ public class BlogVO extends Blog {
      * 是否点赞过了
      */
     private Boolean isLike;
+    /**
+     * 浏览量
+     */
+    private Long view;
 }
